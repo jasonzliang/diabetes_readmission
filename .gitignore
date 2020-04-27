@@ -144,3 +144,4 @@ static
 
 .tags
 .tags_*
+.DS_store

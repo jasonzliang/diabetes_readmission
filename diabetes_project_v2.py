@@ -1,5 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import os
+import sys
 import time
 
 import pandas as pd
@@ -8,8 +9,8 @@ import matplotlib.pyplot as plt
 
 from sklearn.preprocessing import StandardScaler
 import keras
-from keras.models import Sequential
-from keras.layers import Dense
+from keras.models import Sequential, model_from_json
+from keras.layers import Dense, Dropout
 
 def prepare_data():
     if os.path.exists("df_train.csv") \
@@ -160,7 +161,7 @@ def prepare_data():
 
     return df_train, df_train_all, df_valid, df_test, col2use
 
-def train():
+def train(model_path=None):
     num_classes = 2
 
     df_train, df_train_all, df_valid, df_test, col2use = prepare_data()
@@ -190,17 +191,34 @@ def train():
 
 
     # Neural network
-    model = Sequential()
-    model.add(Dense(64, input_dim=143, activation='relu'))
-    model.add(Dropout(0.25))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.25))
-    model.add(Dense(64, activation='relu'))
-    model.add(Dropout(0.25))
-    model.add(Dense(2, activation='softmax'))
+    if model_path is not None:
+        with open(model_path, 'r') as f:
+            model = model_from_json(f.read())
+    else:
+        model = Sequential()
+        model.add(Dense(64, input_dim=143, activation='relu'))
+        model.add(Dropout(0.25))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dropout(0.25))
+        model.add(Dense(64, activation='relu'))
+        model.add(Dropout(0.25))
+        model.add(Dense(2, activation='softmax'))
+
+    model.compile(loss='binary_crossentropy', optimizer='adam',
+        metrics=['accuracy'])
+    model.fit(X_train, y_train,
+        batch_size=128,
+        epochs=5,
+        validation_data=(X_valid, y_valid))
+    test_loss, test_acc = model.evaluate(X_test, y_test, batch_size=128)
+    print("Test Loss: %s" % test_loss)
+    print("Test Accuracy %s" % test_acc)
     # import pickle
     # scalerfile = 'scaler.sav'
     # pickle.dump(scaler, open(scalerfile, 'wb'))
 
 if __name__ == "__main__":
-    train()
+    if len(sys.argv) == 2:
+        train(sys.argv[1])
+    else:
+        train()
